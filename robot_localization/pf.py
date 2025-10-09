@@ -254,6 +254,19 @@ class ParticleFilter(Node):
         """
         # TODO: implement this
 
+        #get each particle distance to the closest obstacle
+
+        for i in range(300):
+            distance_particle = self.occupancy_field.closest_occ(self.particle_cloud[i].x,self.particle_cloud[i].y)
+            distance_neato = min(r)
+            delta_d = abs(distance_particle - distance_neato)
+            if delta_d !=0:
+                self.particle_cloud[i].w = max(0.1,min(10, 1/delta_d))
+            else:
+                self.particle_cloud[i].w = 10
+
+        
+
         # self.particle_cloud[i].w = weight of particle i
         # self.occupancy_field.closest_occ(x of particle, y of particle)
 
