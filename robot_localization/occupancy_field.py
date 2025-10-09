@@ -24,6 +24,7 @@ class OccupancyField(object):
         rclpy.spin_until_future_complete(node, self.future)
         self.map = self.future.result().map
         node.get_logger().info("map received width: {0} height: {1}".format(self.map.info.width, self.map.info.height))
+
         # The coordinates of each grid cell in the map
         X = np.zeros((self.map.info.width*self.map.info.height, 2))
 
@@ -51,10 +52,12 @@ class OccupancyField(object):
                     occupied[curr, 0] = float(i)
                     occupied[curr, 1] = float(j)
                     curr += 1
+
         node.get_logger().info("building ball tree")
         # use super fast scikit learn nearest neighbor algorithm
         nbrs = NearestNeighbors(n_neighbors=1,
                                 algorithm="ball_tree").fit(occupied)
+        
         node.get_logger().info("finding neighbors")
         distances, indices = nbrs.kneighbors(X)
 
