@@ -251,6 +251,10 @@ class ParticleFilter(Node):
             theta: the angle relative to the robot frame for each corresponding reading 
         """
         # TODO: implement this
+
+        # self.particle_cloud[i].w = weight of particle i
+        # self.occupancy_field.closest_occ(x of particle, y of particle)
+
         pass
 
     def update_initial_pose(self, msg):
