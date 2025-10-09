@@ -216,6 +216,7 @@ class ParticleFilter(Node):
         """
         new_odom_xy_theta = self.transform_helper.convert_pose_to_xy_and_theta(
             self.odom_pose)
+        
         # compute the change in x,y,theta since our last update
         if self.current_odom_xy_theta:
             old_odom_xy_theta = self.current_odom_xy_theta
@@ -227,9 +228,13 @@ class ParticleFilter(Node):
         else:
             self.current_odom_xy_theta = new_odom_xy_theta
             return
-
-        # TODO: modify particles using delta
-
+        
+        # moves particles by delta in their own reference frames
+        for p in self.particle_cloud:
+            p.x += delta[0]*math.cos(p.theta)
+            p.y += delta[1]*math.sin(p.theta)
+            p.theta += delta[2]
+        
     def resample_particles(self):
         """ Resample the particles according to the new particle weights.
             The weights stored with each particle should define the probability that a particular
