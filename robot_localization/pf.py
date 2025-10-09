@@ -249,13 +249,13 @@ class ParticleFilter(Node):
 
         # TODO create particles
         #particles = Particle(0,0,0)
-        
+        particle_x = np.random.normal(x,0.25,self.n_particles)
+        particle_y = np.random.normal(y,0.25,self.n_particles)
+        particle_theta = np.random.normal(theta,0.25,self.n_particles)
+
         for i in range(self.n_particles):
             (x,y,theta) = xy_theta
-            particle_x = np.random.normal(x,0.25,self.n_particles)
-            particle_y = np.random.normal(y,0.25,self.n_particles)
-            particle_theta = np.random.normal(theta,0.25,self.n_particles)
-            p = Particle(particle_x,particle_y,particle_theta)
+            p = Particle(particle_x(i),particle_y(i),particle_theta(i))
             self.particle_cloud.append(p)
             
 
