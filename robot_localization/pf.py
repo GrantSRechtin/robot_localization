@@ -243,8 +243,10 @@ class ParticleFilter(Node):
         """
         # make sure the distribution is normalized
         self.normalize_particles()
-        # TODO: fill out the rest of the implementation
 
+        weights = (p.w for p in self.particle_cloud)
+        self.particle_cloud = np.random.choice(self.particle_cloud,300,weights)
+        
     def update_particles_with_laser(self, r, theta):
         """ Updates the particle weights in response to the scan data
             r: the distance readings to obstacles
