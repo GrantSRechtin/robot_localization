@@ -274,7 +274,6 @@ class ParticleFilter(Node):
                 self.odom_pose)
         self.particle_cloud = []
 
-        # TODO create particles
         # particles = Particle(0,0,0)
         particle_x = np.random.normal(x, 0.25, self.n_particles)
         particle_y = np.random.normal(y, 0.25, self.n_particles)
@@ -290,8 +289,6 @@ class ParticleFilter(Node):
 
     def normalize_particles(self):
         """ Make sure the particle weights define a valid distribution (i.e. sum to 1.0) """
-        # TODO: implement this
-
         total = sum(p.w for p in self.particle_cloud)
         if total != 1:
             for p in self.particle_cloud:
