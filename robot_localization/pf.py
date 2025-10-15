@@ -20,7 +20,6 @@ from helper_functions import TFHelper
 from rclpy.qos import qos_profile_sensor_data
 from angle_helpers import quaternion_from_euler
 
-
 class Particle(object):
     """ Represents a hypothesis (particle) of the robot's pose consisting of x,y and theta (yaw)
         Attributes:
@@ -49,7 +48,6 @@ class Particle(object):
 
     # TODO: define additional helper functions if needed
 
-
 class ParticleFilter(Node):
     """ The class that represents a Particle Filter ROS Node
         Attributes list:
@@ -71,7 +69,6 @@ class ParticleFilter(Node):
                                    The pose is expressed as a list [x,y,theta] (where theta is the yaw)
             thread: this thread runs your main loop
     """
-
     def __init__(self):
         super().__init__('pf')
         self.base_frame = "base_footprint"   # the frame of the robot base
@@ -254,6 +251,19 @@ class ParticleFilter(Node):
         """
         # TODO: implement this
 
+        #get each particle distance to the closest obstacle
+
+        for i in range(300):
+            distance_particle = self.occupancy_field.closest_occ(self.particle_cloud[i].x,self.particle_cloud[i].y)
+            distance_neato = min(r)
+            delta_d = abs(distance_particle - distance_neato)
+            if delta_d !=0:
+                self.particle_cloud[i].w = max(0.1,min(10, 1/delta_d))
+            else:
+                self.particle_cloud[i].w = 10
+
+        
+
         # self.particle_cloud[i].w = weight of particle i
         # self.occupancy_field.closest_occ(x of particle, y of particle)
 
@@ -311,13 +321,11 @@ class ParticleFilter(Node):
         if self.scan_to_process is None:
             self.scan_to_process = msg
 
-
 def main(args=None):
     rclpy.init()
     n = ParticleFilter()
     rclpy.spin(n)
     rclpy.shutdown()
-
 
 if __name__ == '__main__':
     main()
