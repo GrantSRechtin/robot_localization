@@ -205,6 +205,22 @@ class ParticleFilter(Node):
         else:
             self.get_logger().warn("Can't set map->odom transform since no odom data received")
 
+        important_particles = (p for p in self.particle_cloud if p.w > max(par.w for par in self.particle_cloud) - 1)
+        mean_x = sum(p.x for p in important_particles)/len(important_particles)
+        mean_y = sum(p.y for p in important_particles)/len(important_particles)
+        mean_theta = sum(p.theta for p in important_particles)/len(important_particles)
+
+        q = quaternion_from_euler(0, 0, self.theta)
+
+        self.robot_pose.position.x = mean_x
+        self.robot_pose.position.y = mean_y
+        self.robot_pose.position.z = 0
+
+        self.robot_pose.orientation.x = q[0]
+        self.robot_pose.orientation.y = q[1]
+        self.robot_pose.orientation.z = q[2]
+        self.robot_pose.orientation.w = q[3]
+
     def update_particles_with_odom(self):
         """ Update the particles using the newly given odometry pose.
             The function computes the value delta which is a tuple (x,y,theta)
