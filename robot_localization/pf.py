@@ -210,7 +210,7 @@ class ParticleFilter(Node):
         mean_y = sum(p.y for p in important_particles)/len(important_particles)
         mean_theta = sum(p.theta for p in important_particles)/len(important_particles)
 
-        q = quaternion_from_euler(0, 0, self.theta)
+        q = quaternion_from_euler(0, 0, mean_theta)
 
         self.robot_pose.position.x = mean_x
         self.robot_pose.position.y = mean_y
