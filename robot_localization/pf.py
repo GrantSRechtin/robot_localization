@@ -20,6 +20,7 @@ from helper_functions import TFHelper
 from rclpy.qos import qos_profile_sensor_data
 from angle_helpers import quaternion_from_euler
 
+
 class Particle(object):
     """ Represents a hypothesis (particle) of the robot's pose consisting of x,y and theta (yaw)
         Attributes:
@@ -48,6 +49,7 @@ class Particle(object):
 
     # TODO: define additional helper functions if needed
 
+
 class ParticleFilter(Node):
     """ The class that represents a Particle Filter ROS Node
         Attributes list:
@@ -69,6 +71,7 @@ class ParticleFilter(Node):
                                    The pose is expressed as a list [x,y,theta] (where theta is the yaw)
             thread: this thread runs your main loop
     """
+
     def __init__(self):
         super().__init__('pf')
         self.base_frame = "base_footprint"   # the frame of the robot base
@@ -167,7 +170,7 @@ class ParticleFilter(Node):
 
         if not self.current_odom_xy_theta:
             self.current_odom_xy_theta = new_odom_xy_theta
-        elif not self.particle_cloud:
+        elif len(self.particle_cloud) < 300:
             # now that we have all of the necessary transforms we can update the particle cloud
             self.initialize_particle_cloud(msg.header.stamp)
         elif self.moved_far_enough_to_update(new_odom_xy_theta):
@@ -196,8 +199,6 @@ class ParticleFilter(Node):
         # first make sure that the particle weights are normalized
         self.normalize_particles()
 
-        # TODO: assign the latest pose into self.robot_pose as a geometry_msgs.Pose object
-        # just to get started we will fix the robot's pose to always be at the origin
         self.robot_pose = Pose()
         if hasattr(self, 'odom_pose'):
             self.transform_helper.fix_map_to_odom_transform(self.robot_pose,
@@ -205,16 +206,18 @@ class ParticleFilter(Node):
         else:
             self.get_logger().warn("Can't set map->odom transform since no odom data received")
 
-        important_particles = (p for p in self.particle_cloud if p.w > max(par.w for par in self.particle_cloud) - 1)
+        important_particles = [p for p in self.particle_cloud if p.w > max(
+            [par.w for par in self.particle_cloud]) - 1]
         mean_x = sum(p.x for p in important_particles)/len(important_particles)
         mean_y = sum(p.y for p in important_particles)/len(important_particles)
-        mean_theta = sum(p.theta for p in important_particles)/len(important_particles)
+        mean_theta = sum(p.theta for p in important_particles) / \
+            len(important_particles)
 
         q = quaternion_from_euler(0, 0, mean_theta)
 
         self.robot_pose.position.x = mean_x
         self.robot_pose.position.y = mean_y
-        self.robot_pose.position.z = 0
+        self.robot_pose.position.z = 0.0
 
         self.robot_pose.orientation.x = q[0]
         self.robot_pose.orientation.y = q[1]
@@ -229,7 +232,7 @@ class ParticleFilter(Node):
         """
         new_odom_xy_theta = self.transform_helper.convert_pose_to_xy_and_theta(
             self.odom_pose)
-        
+
         # compute the change in x,y,theta since our last update
         if self.current_odom_xy_theta:
             old_odom_xy_theta = self.current_odom_xy_theta
@@ -241,13 +244,13 @@ class ParticleFilter(Node):
         else:
             self.current_odom_xy_theta = new_odom_xy_theta
             return
-        
+
         # moves particles by delta in their own reference frames
         for p in self.particle_cloud:
             p.x += delta[0]*math.cos(p.theta)
             p.y += delta[1]*math.sin(p.theta)
             p.theta += delta[2]
-        
+
     def resample_particles(self):
         """ Resample the particles according to the new particle weights.
             The weights stored with each particle should define the probability that a particular
@@ -258,8 +261,14 @@ class ParticleFilter(Node):
         self.normalize_particles()
 
         weights = (p.w for p in self.particle_cloud)
-        self.particle_cloud = np.random.choice(self.particle_cloud,300,weights)
-        
+        self.particle_cloud = np.random.choice(
+            self.particle_cloud, 300, weights)
+
+        for p in self.particle_cloud:
+            p.x += np.random.random() * 0.125
+            p.y += np.random.random() * 0.125
+            p.theta += np.random.random() * 0.125
+
     def update_particles_with_laser(self, r, theta):
         """ Updates the particle weights in response to the scan data
             r: the distance readings to obstacles
@@ -267,13 +276,19 @@ class ParticleFilter(Node):
         """
 
         for i in range(300):
-            distance_particle = self.occupancy_field.closest_occ(self.particle_cloud[i].x,self.particle_cloud[i].y)
+
+            p_x = self.particle_cloud[i].x
+            p_y = self.particle_cloud[i].y
+
+            distance_particle = self.occupancy_field.get_closest_obstacle_distance(
+                p_x, p_y)
             distance_neato = min(r)
+
             delta_d = abs(distance_particle - distance_neato)
-            if delta_d !=0:
-                self.particle_cloud[i].w = max(0.1,min(10, 1/delta_d))
+            if delta_d != 0:
+                self.particle_cloud[i].w = max(0.1, min(20, 0.5/delta_d))
             else:
-                self.particle_cloud[i].w = 10
+                self.particle_cloud[i].w = 20
 
         pass
 
@@ -295,13 +310,13 @@ class ParticleFilter(Node):
         self.particle_cloud = []
 
         # particles = Particle(0,0,0)
-        particle_x = np.random.normal(x, 0.25, self.n_particles)
-        particle_y = np.random.normal(y, 0.25, self.n_particles)
-        particle_theta = np.random.normal(theta, 0.25, self.n_particles)
+        particle_x = np.random.normal(xy_theta[0], 0.5, self.n_particles)
+        particle_y = np.random.normal(xy_theta[1], 0.5, self.n_particles)
+        particle_theta = np.random.normal(xy_theta[2], 0.5, self.n_particles)
 
         for i in range(self.n_particles):
             (x, y, theta) = xy_theta
-            p = Particle(particle_x(i), particle_y(i), particle_theta(i))
+            p = Particle(particle_x[i], particle_y[i], particle_theta[i])
             self.particle_cloud.append(p)
 
         self.normalize_particles()
@@ -329,11 +344,13 @@ class ParticleFilter(Node):
         if self.scan_to_process is None:
             self.scan_to_process = msg
 
+
 def main(args=None):
     rclpy.init()
     n = ParticleFilter()
     rclpy.spin(n)
     rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()
