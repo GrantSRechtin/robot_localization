@@ -312,7 +312,7 @@ class ParticleFilter(Node):
         # particles = Particle(0,0,0)
         particle_x = np.random.normal(xy_theta[0], 0.5, self.n_particles)
         particle_y = np.random.normal(xy_theta[1], 0.5, self.n_particles)
-        particle_theta = np.random.normal(xy_theta[2], 0.5, self.n_particles)
+        particle_theta = np.random.normal(xy_theta[2], 60, self.n_particles)
 
         for i in range(self.n_particles):
             (x, y, theta) = xy_theta
