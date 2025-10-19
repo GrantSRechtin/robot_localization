@@ -215,14 +215,10 @@ class ParticleFilter(Node):
 
         q = quaternion_from_euler(0, 0, mean_theta)
 
-        self.robot_pose.position.x = mean_x
-        self.robot_pose.position.y = mean_y
-        self.robot_pose.position.z = 0.0
+        self.robot_pose = Pose(position=Point(x=mean_x, y=mean_y, z=0.0),
+                    orientation=Quaternion(x=q[0], y=q[1], z=q[2], w=q[3]))
 
-        self.robot_pose.orientation.x = q[0]
-        self.robot_pose.orientation.y = q[1]
-        self.robot_pose.orientation.z = q[2]
-        self.robot_pose.orientation.w = q[3]
+        self.transform_helper.fix_map_to_odom_transform(self.robot_pose, self.odom_pose)
 
     def update_particles_with_odom(self):
         """ Update the particles using the newly given odometry pose.
@@ -265,9 +261,9 @@ class ParticleFilter(Node):
             self.particle_cloud, 300, weights)
 
         for p in self.particle_cloud:
-            p.x += np.random.random() * 0.125
-            p.y += np.random.random() * 0.125
-            p.theta += np.random.random() * 0.125
+            p.x += np.random.normal(0,0.1,1) 
+            p.y += np.random.normal(0,0.1,1)
+            p.theta += np.random.normal(0,15,1)
 
     def update_particles_with_laser(self, r, theta):
         """ Updates the particle weights in response to the scan data
@@ -286,11 +282,9 @@ class ParticleFilter(Node):
 
             delta_d = abs(distance_particle - distance_neato)
             if delta_d != 0:
-                self.particle_cloud[i].w = max(0.1, min(20, 0.5/delta_d))
+                self.particle_cloud[i].w = max(0.1, min(10, 1/delta_d))
             else:
-                self.particle_cloud[i].w = 20
-
-        pass
+                self.particle_cloud[i].w = 10
 
     def update_initial_pose(self, msg):
         """ Callback function to handle re-initializing the particle filter based on a pose estimate.
@@ -309,7 +303,9 @@ class ParticleFilter(Node):
                 self.odom_pose)
         self.particle_cloud = []
 
-        # particles = Particle(0,0,0)
+        w = self.occupancy_field.map.info.width / 3
+        h = self.occupancy_field.map.info.height / 3
+
         particle_x = np.random.normal(xy_theta[0], 0.5, self.n_particles)
         particle_y = np.random.normal(xy_theta[1], 0.5, self.n_particles)
         particle_theta = np.random.normal(xy_theta[2], 60, self.n_particles)
