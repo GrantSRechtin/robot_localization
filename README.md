@@ -12,12 +12,10 @@ We started by estabishing the topics our particles would subscribe and publish t
 
 <p align="center"><strong>Figure 1.</strong> Particle Filter Subscribers and Publishers.</p>
 
-### Initializing Particles
-We initialized 300 particles in the world view. This number was given in the starter code and we decided it would be a good initial value.  This cloud of 300 particles was randomly scattered across our map using a normal distribution. This distribution randomly scatters the particles using a bell-shaped probability, where the particles occur less likely the further out it spreads from the center location. We chose to use a normal distribution simply because they are popular amongst data science models. 
+<span style="color: red;">Edit image to Include pose estimate topic and type: Pose. Topic: </span> 
 
-Our particles are initialized into a map and given a small rotation based on a minimal range.
-
-<span style="color: red;">NOTE TO SELF: How big is the map? Also change the rotation here.</span> 
+#### Initializing Particles
+We initialized 300 particles in the world view. This number was given in the starter code and we decided it would be a good initial value.  This cloud of 300 particles was randomly scattered across our map using a normal distribution to randomly scatter the x,y, and theta of the particles. This distribution randomly scatters the particles using a bell-shaped probability onto a map, where the particles occur less likely the further out it spreads from the center location. We chose to use a normal distribution simply because they are popular amongst data science models. 
 
 #### Updating Particles with ODOM
 After initializing our particle and moving our Neato away from its initial position, we needed to ensure all particles move correctly with the new position. We wanted the particles to each move relative to their local view in relation to the Neato's movement. First, we stored the change in x,y, and theta for our Neato. Next, we calculated each particles change in x,y, and theta using trigonometry. The following figure shows the particles transformation relative to it's initial placement:
@@ -38,14 +36,15 @@ $$
 
 We looped through each particle making sure to add each change to the (x,y,theta) coordinates. After changing each particle in it's local view, the next step was to assign particle weights.
 
-#### Assigning particle weights
-To assign particle weights, we found the Neato's distance to the closest object, then found each particles distance to the closest object. We compared the distances of the particle to the nearest object and the neato's distance to the nearest object using delta d.
+#### Assigning Particle Weights
+To assign particle weights, we found the Neato's distance to the closest object (using the helper function occupancy_field.get_closest_obstacle_distance), then found each particles distance to the closest object (r). We compared the distances of the particle to the nearest object and the neato's distance to the nearest object using delta d.
 
 $$
 \Delta d = abs (distance_p - distance_n)
 $$
 
-This equation assigns the strongest particles a value of 0, and the weakest particles a theoretical value of infinity (reasonably as large as the selected world map). This is a difficult and unintuitive scale to work with, so we adjusted the scale. Particles closest to 0 should have a weight of 10, while The general logic for normal cases uses the equation:
+This equation assigns the strongest particles a value of 0, and the weakest particles a theoretical value of infinity (reasonably as large as the selected world map). This is a difficult and unintuitive scale to work with, so we adjusted the scale. We decided that particles closest to 0 should have a weight of 10 instead, while the weakest particles should have a weight of 0. We made this decision because while conceptualizing the project and creating examples to run through the code we thought in terms of whole numbers. While making predictions, debugging, and using fractions such as the equation we have below, whole numbers became easier to conceptualize than decimals. We felt confident picking this range especially since we expected to normalize the particles further into the project anyway. The general logic for assigning particle values in normal cases uses the following equation:
+
 
 $$
 p_w = max(0.1,min(10, \frac{1}{\Delta d}))
@@ -53,17 +52,22 @@ $$
 
 In the unlikely case where the particle weight is exactly 0, the weight of the particle is assigned to 10 instead.
 
+
+
 #### Normalizing and Resampling Particles
 Normalizing particles is necessary for functions such as resampling particles, where the weights will be interpreted as probabilities. We normalized the particles by ensuring that the sum of all the weights is equal to 1. We simply calculated the total sum of particle weights in particle cloud, and divided each particle weight by the total sum.
 
-<span style="color: red;">NOTE TO SELF: ARE SOME PARTICLES RANDOMLY INITIALIZED?</span> 
 
-We collected the particle weights from each particle and used numpy.random to randomly choose from the list of particle weights. 300 new particles are chosen, and the probability of sampling each particle is proportional to its weight. Our filter focuses on the regions with the highest weights, and uses that to estimate the Neato's new pose.
+$$
+p_w = \frac{p_w}{total\ particles} 
+$$
+
+We collected the particle weights from each particle and used numpy.random to randomly choose from the list of particle weights. 300 new particles are chosen, and the probability of sampling each particle is proportional to its weight. This means that particles with a higher weight are likely to be chosen, but we will still include a small portion of particles sampled away from the highest concentrated areas to prevent poor convergence and particle death. The chosen particles are then varied by 0.125 in each direction. This was arbitrarily chosen to add more variance. Our filter then uses the new regions with the highest weights to estimate the Neato's new pose.
 
 
 
 ## How to interact with our code
-<span style="color: red;">??? idk bro.</span> 
+<span style="color: red;">??? idk bro.:: from the website, there are some things to run (running the bags, the map, and the code, rviz too. Mention before this that you need to download this repo, and the neatopackages repo found on comprobo25.github.io</span> 
 
 ## Team Member Contributions
 
