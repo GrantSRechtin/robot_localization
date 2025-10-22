@@ -1,31 +1,96 @@
-to do:
-- initialize the particles in the cloud
-Process:
-    
-Don't Know:
-    Visualization
+# Robot Localization Project
 
-- particle weighting with lasers
-Process:
-    
-Don't Know:
-    LaserScans from particles onto a know map
+## Project Overview
+The goal of this project is to use a particle filter system to determine the location of our Neato in the context of the world map. To do this, we used a combination of information from the Neato's laser scanner as well as the distance of our established particles and compared the distances to the obstacles around them to estimate the Neato's location in the map.
 
-- modify particles based on movement
-Process:
-    Taking movement from the Neato and applying to the particles
+## Conceptual Breakdown
 
-- normalize particles
-Process:
-    Math to make the sum of weights equal to 1
+### Architecture Overview
+We started by estabishing the topics our particles would subscribe and publish to, and indicated the role of each topic in the context of the particle filter.
 
-- resampling of particles
-Process:
-    Resampling based on areas of high weight
-    Some particles still fully random to deal with local minima
+![alt text](original-FB01AECD-6203-4AB9-A840-AFD7AE8F66CF.jpeg)
 
-- update robot pose estimate
-Process:
-    find average position within an cluster of higher weight
+<p align="center"><strong>Figure 1.</strong> Particle Filter Subscribers and Publishers.</p>
 
-- anything within the particle class
+<span style="color: red;">Edit image to Include pose estimate topic and type: Pose. Topic: </span> 
+
+#### Initializing Particles
+We initialized 300 particles in the world view. This number was given in the starter code and we decided it would be a good initial value.  This cloud of 300 particles was randomly scattered across our map using a normal distribution to randomly scatter the x,y, and theta of the particles. This distribution randomly scatters the particles using a bell-shaped probability onto a map, where the particles occur less likely the further out it spreads from the center location. We chose to use a normal distribution simply because they are popular amongst data science models. 
+
+#### Updating Particles with ODOM
+After initializing our particle and moving our Neato away from its initial position, we needed to ensure all particles move correctly with the new position. We wanted the particles to each move relative to their local view in relation to the Neato's movement. First, we stored the change in x,y, and theta for our Neato. Next, we calculated each particles change in x,y, and theta using trigonometry. The following figure shows the particles transformation relative to it's initial placement:
+
+
+$$
+\Delta x = \Delta x_n * cos(\theta_p)
+$$
+$$
+\Delta y = \Delta y_n * sin(\theta_p)
+$$
+$$
+\Delta \theta = \theta_p + \theta_n
+$$
+
+<p align="center"><strong>Figure 2.</strong> Particle update equations.</p>
+<p align="center"><em>Subscripts denote: n = neato, p = particle.</em></p>
+
+We looped through each particle making sure to add each change to the (x,y,theta) coordinates. After changing each particle in it's local view, the next step was to assign particle weights.
+
+#### Assigning Particle Weights
+To assign particle weights, we found the Neato's distance to the closest object (using the helper function occupancy_field.get_closest_obstacle_distance), then found each particles distance to the closest object (r). We compared the distances of the particle to the nearest object and the neato's distance to the nearest object using delta d.
+
+$$
+\Delta d = abs (distance_p - distance_n)
+$$
+
+This equation assigns the strongest particles a value of 0, and the weakest particles a theoretical value of infinity (reasonably as large as the selected world map). This is a difficult and unintuitive scale to work with, so we adjusted the scale. We decided that particles closest to 0 should have a weight of 10 instead, while the weakest particles should have a weight of 0. We made this decision because while conceptualizing the project and creating examples to run through the code we thought in terms of whole numbers. While making predictions, debugging, and using fractions such as the equation we have below, whole numbers became easier to conceptualize than decimals. We felt confident picking this range especially since we expected to normalize the particles further into the project anyway. The general logic for assigning particle values in normal cases uses the following equation:
+
+
+$$
+p_w = max(0.1,min(10, \frac{1}{\Delta d}))
+$$
+
+In the unlikely case where the particle weight is exactly 0, the weight of the particle is assigned to 10 instead.
+
+
+
+#### Normalizing and Resampling Particles
+Normalizing particles is necessary for functions such as resampling particles, where the weights will be interpreted as probabilities. We normalized the particles by ensuring that the sum of all the weights is equal to 1. We simply calculated the total sum of particle weights in particle cloud, and divided each particle weight by the total sum.
+
+
+$$
+p_w = \frac{p_w}{total\ particles} 
+$$
+
+We collected the particle weights from each particle and used numpy.random to randomly choose from the list of particle weights. 300 new particles are chosen, and the probability of sampling each particle is proportional to its weight. This means that particles with a higher weight are likely to be chosen, but we will still include a small portion of particles sampled away from the highest concentrated areas to prevent poor convergence and particle death. The chosen particles are then varied by 0.125 in each direction. This was arbitrarily chosen to add more variance. Our filter then uses the new regions with the highest weights to estimate the Neato's new pose.
+
+
+
+## How to interact with our code
+<span style="color: red;">??? idk bro.:: from the website, there are some things to run (running the bags, the map, and the code, rviz too. Mention before this that you need to download this repo, and the neatopackages repo found on comprobo25.github.io</span> 
+
+## Team Member Contributions
+
+### Grant
+* Assigned the latest robot pose
+* Modified particles using delta
+* Normalized Particles
+* Edited particle functions for different cases
+* What we learned and challenges Writeup
+
+### Tchenzie
+* Created Particle_cloud
+* Update Particles with Laser
+* Conceptual Breakdown Writeup
+
+
+## What We Learned and Challenges
+### Challenges we faced along the way:
+I think the biggest challenges to us overall were much more general, stemming partially from having the large set of starter code we did. It felt for a long while like we didn’t fully have an understanding of what we were actually doing. This got better as we looked into the starter code and talked with CAs, but the process from learning about the project to actually coding it took much longer than the previous project. Once we actually had an understanding of the code generally, the process wasn’t the most complex and expansive project since most of the portions we wrote were rather small, however we ran into more issues actually running it. Because of how so much of the code was already there it was hard to understand where a lot of our errors were. While we ended up getting it working (assuming we do), it took much more CA and teacher assistance than the first project.
+
+### How we would improve with more time:
+I think the biggest aspect we could work on improving is finding the robot pose from the particles. Since we felt we didn’t fully understand the whole process we opted for just averaging the positions of the most heavily weighted particles for our robot position. This doesn’t account for multiple clusters so it’s suboptimal. Having a solution for multiple clusters would be the best next option for a tangible improvement for the project.
+Did you learn any interesting lessons for future robotic programming projects? These could relate to working on robotics projects in teams, working on more open-ended (and longer term) problems, or any other relevant topic.
+
+### Valuable lesson
+One valuable lesson that having the sample code did show us was the importance of separating projects into different parts and thinking about them one at a time. It helped us, once we started coding, to go through them in the order they were called and coding in a similar manner in the future could be extremely beneficial.
