@@ -62,7 +62,7 @@ Normalizing particles is necessary for functions such as resampling particles, w
 
 
 $$
-p_w = \frac{p_w}{total\ particles} 
+p_w = \frac{p_w}{sum\ of\ particle\ weights} 
 $$
 
 We collected the particle weights from each particle and used numpy.random to randomly choose from the list of particle weights. 300 new particles are chosen, and the probability of sampling each particle is proportional to its weight. This means that particles with a higher weight are likely to be chosen, but we will still include a small portion of particles sampled away from the highest concentrated areas to prevent poor convergence and particle death. The chosen particles are then varied by 0.125 in each direction. This was arbitrarily chosen to add more variance. Our filter then uses the new regions with the highest weights to estimate the Neato's new pose.
