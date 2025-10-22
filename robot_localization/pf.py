@@ -273,21 +273,32 @@ class ParticleFilter(Node):
             particle is selected in the resampling step.  You may want to make use of the given helper
             function draw_random_sample in helper_functions.py.
         """
-        # make sure the distribution is normalized
         self.normalize_particles()
         weights = [p.w for p in self.particle_cloud]
+        weights = np.clip(weights, 0, 1)
+        weights /= np.sum(weights)
 
-        self.particle_cloud = draw_random_sample(
-            self.particle_cloud, weights, self.n_particles)
+        new_cloud = draw_random_sample(
+            self.particle_cloud, weights, self.n_particles)[0:(int(self.n_particles*0.6))]
         
-        p_x = np.random.normal(0, 0.25, self.n_particles)
-        p_y = np.random.normal(0, 0.25, self.n_particles)
-        p_theta = np.random.normal(0, 0.25, self.n_particles)
+        p_x = np.random.normal(0, 0.25, len(new_cloud))
+        p_y = np.random.normal(0, 0.25, len(new_cloud))
+        p_theta = np.random.normal(0, 0.25, len(new_cloud))
 
-        for i in range(self.n_particles):
-            self.particle_cloud[i].x += p_x[i]
-            self.particle_cloud[i].y += p_y[i]
-            self.particle_cloud[i].theta += p_theta[i]
+        for i in range(len(new_cloud)):
+            new_cloud[i].x += p_x[i]
+            new_cloud[i].y += p_y[i]
+            new_cloud[i].theta += p_theta[i]
+
+        bb = self.occupancy_field.get_obstacle_bounding_box()
+        random_particles = []
+        for _ in range((int(self.n_particles*0.40))):
+            x = np.random.uniform(bb[0][0], bb[0][1])
+            y = np.random.uniform(bb[1][0], bb[1][1])
+            theta = np.random.uniform(-math.pi, math.pi)
+            random_particles.append(Particle(x, y, theta))
+
+        self.particle_cloud = new_cloud + random_particles
 
     def update_particles_with_laser(self, r, theta):
         """ Updates the particle weights in response to the scan data
@@ -295,7 +306,6 @@ class ParticleFilter(Node):
             theta: the angle relative to the robot frame for each corresponding reading 
         """
 
-    def update_particles_with_laser(self, r, theta):
         max_range = 3.5  #LIDAR range
         num_rays = 20  # avoid excessive computing
 
@@ -334,27 +344,26 @@ class ParticleFilter(Node):
         """ Initialize the particle cloud.
             Arguments
             xy_theta: a triple consisting of the mean x, y, and theta (yaw) to initialize the
-                      particle cloud around.  If this input is omitted, the odometry will be used """
+                        particle cloud around.  If this input is omitted, the odometry will be used """
         if xy_theta is None:
             xy_theta = self.transform_helper.convert_pose_to_xy_and_theta(
                 self.odom_pose)
         self.particle_cloud = []
 
+
         bb = self.occupancy_field.get_obstacle_bounding_box()
+
 
         w = abs(bb[0][1] - bb[0][0])/3
         h = abs(bb[1][1] - bb[1][0])/3
 
-        #x_lower: -1.12 x_upper: 25.939999395161866 y_lower: -39.310000002011655 y_upper: 11.509998862072827
 
-        particle_x = np.random.normal(xy_theta[0], 0.5, self.n_particles)
-        particle_y = np.random.normal(xy_theta[1], 0.5, self.n_particles)
-        particle_theta = np.random.normal(xy_theta[2], 0.5, self.n_particles)
+        for _ in range(self.n_particles):
+            x = np.random.uniform(bb[0][0], bb[0][1])
+            y = np.random.uniform(bb[1][0], bb[1][1])
+            theta = np.random.uniform(-math.pi, math.pi)
+            self.particle_cloud.append(Particle(x, y, theta))
 
-        for i in range(self.n_particles):
-            (x, y, theta) = xy_theta
-            p = Particle(particle_x[i], particle_y[i], particle_theta[i])
-            self.particle_cloud.append(p)
 
         self.normalize_particles()
         self.update_robot_pose()

@@ -15,11 +15,10 @@ We started by estabishing the topics our particles would subscribe and publish t
 <span style="color: red;">Edit image to Include pose estimate topic and type: Pose. Topic: </span> 
 
 #### Initializing Particles
-We initialized 300 particles in the world view. This number was given in the starter code and we decided it would be a good initial value.  This cloud of 300 particles was randomly scattered across our map using a normal distribution to randomly scatter the x,y, and theta of the particles. This distribution randomly scatters the particles using a bell-shaped probability onto a map, where the particles occur less likely the further out it spreads from the center location. We chose to use a normal distribution simply because they are popular amongst data science models. 
+We initialized 1000 particles in the world view. Through testing values ranging from 300, the starting value, to 2000, we found that generally more particles works better up to a certain point when the process takes too long to keep up with the neato. 1000 ended up as a good value to maximize both speed and accuracy.  This cloud of 1000 particles was randomly scattered across our map using a uniform distribution to randomly scatter the x,y, and theta of the particles. As we don’t have an initial guess for the location of the neato a uniform distribution is best to cover as many possibilities as possible.
 
 #### Updating Particles with ODOM
-After initializing our particle and moving our Neato away from its initial position, we needed to ensure all particles move correctly with the new position. We wanted the particles to each move relative to their local view in relation to the Neato's movement. First, we stored the change in x,y, and theta for our Neato. Next, we calculated each particles change in x,y, and theta using trigonometry. The following figure shows the particles transformation relative to it's initial placement:
-
+Following the initialization of the particles, once the Neato has moved a set distance from its initial or previous position, repeat the same movement for each particle within their own respective frame. To do this, using the stored changes in x,y, and theta for our Neato, we calculate each particle's new x,y, and theta. The following figure shows the particle's transformation relative to its initial placement:
 
 $$
 \Delta x = \Delta x_n * cos(\theta_p)
@@ -31,10 +30,12 @@ $$
 \Delta \theta = \theta_p + \theta_n
 $$
 
+
 <p align="center"><strong>Figure 2.</strong> Particle update equations.</p>
 <p align="center"><em>Subscripts denote: n = neato, p = particle.</em></p>
 
-We looped through each particle making sure to add each change to the (x,y,theta) coordinates. After changing each particle in it's local view, the next step was to assign particle weights.
+
+The biggest difficult with this process is thinking about the frames in which we are dealing with, as the movement given is using the changes in the Neato's odom frame, the movement done by the particles has to be performed in each particle's respective frame, but the new positions of each particle are within the world frame.
 
 #### Assigning Particle Weights
 For every particle in particle_cloud, we initialize it with a weight of 1, updating it based on how the particle aligns with the LIDAR data. We collected a small sample of the laser data with num_rays to reduce the computational load. Next, we extracted a small range from the laser data, making sure to skip any invalid r_i readings such as NaN or infinite. We then calculated the probability that a particle is expected to be in the map frame using the logic below:
