@@ -282,7 +282,7 @@ class ParticleFilter(Node):
         
         p_x = np.random.normal(0, 0.25, self.n_particles)
         p_y = np.random.normal(0, 0.25, self.n_particles)
-        p_theta = np.random.normal(0, 10, self.n_particles)
+        p_theta = np.random.normal(0, 0.25, self.n_particles)
 
         for i in range(self.n_particles):
             self.particle_cloud[i].x += p_x[i]
@@ -295,22 +295,33 @@ class ParticleFilter(Node):
             theta: the angle relative to the robot frame for each corresponding reading 
         """
 
-        good_distances = [d for d in r if d > 0.1]
-        distance_neato = min(good_distances)
+    def update_particles_with_laser(self, r, theta):
+        max_range = 3.5  #LIDAR range
+        num_rays = 20  # avoid excessive computing
+
+        indices = np.linspace(0, len(r) - 1, num_rays).astype(int)
+        gaussian_uncertainty = 0.2
 
         for p in self.particle_cloud:
+            weight = 1.0
+            for i in indices:
+                r_i = r[i]
+                theta_i = theta[i]
+                if r_i < 0.1 or math.isinf(r_i) or math.isnan(r_i):
+                    continue
 
-            distance_particle = self.occupancy_field.get_closest_obstacle_distance(
-                p.x, p.y)
+                # Compute expected hit point in map frame
+                x_hit = p.x + r_i * math.cos(p.theta + theta_i)
+                y_hit = p.y + r_i * math.sin(p.theta + theta_i)
 
-            delta_d = float(abs(distance_particle - distance_neato))
+                expected_dist = self.occupancy_field.get_closest_obstacle_distance(x_hit, y_hit)
 
-            if math.isnan(delta_d):
-                p.w = 0.0
-            elif delta_d != 0.0:
-                p.w = max(1, min(20, 5/delta_d))
-            else:
-                p.w = 20.0
+                if expected_dist is not None and not math.isnan(expected_dist):
+                    prob = math.exp(-((expected_dist)**2) / (2 * gaussian_uncertainty**2))
+                    weight *= prob
+
+            p.w = weight
+
 
     def update_initial_pose(self, msg):
         """ Callback function to handle re-initializing the particle filter based on a pose estimate.
@@ -336,9 +347,9 @@ class ParticleFilter(Node):
 
         #x_lower: -1.12 x_upper: 25.939999395161866 y_lower: -39.310000002011655 y_upper: 11.509998862072827
 
-        particle_x = np.random.normal(xy_theta[0], w, self.n_particles)
-        particle_y = np.random.normal(xy_theta[1], h, self.n_particles)
-        particle_theta = np.random.normal(xy_theta[2], 60, self.n_particles)
+        particle_x = np.random.normal(xy_theta[0], 0.5, self.n_particles)
+        particle_y = np.random.normal(xy_theta[1], 0.5, self.n_particles)
+        particle_theta = np.random.normal(xy_theta[2], 0.5, self.n_particles)
 
         for i in range(self.n_particles):
             (x, y, theta) = xy_theta

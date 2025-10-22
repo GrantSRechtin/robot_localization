@@ -37,21 +37,23 @@ $$
 We looped through each particle making sure to add each change to the (x,y,theta) coordinates. After changing each particle in it's local view, the next step was to assign particle weights.
 
 #### Assigning Particle Weights
-To assign particle weights, we found the Neato's distance to the closest object (using the helper function occupancy_field.get_closest_obstacle_distance), then found each particles distance to the closest object (r). We compared the distances of the particle to the nearest object and the neato's distance to the nearest object using delta d.
+For every particle in particle_cloud, we initialize it with a weight of 1, updating it based on how the particle aligns with the LIDAR data. We collected a small sample of the laser data with num_rays to reduce the computational load. Next, we extracted a small range from the laser data, making sure to skip any invalid r_i readings such as NaN or infinite. We then calculated the probability that a particle is expected to be in the map frame using the logic below:
 
 $$
-\Delta d = abs (distance_p - distance_n)
+x_{hit} = p.x + r_i * cos(p.\theta + \theta _i)
+$$
+$$
+y_{hit} = p.y + r_i * sin(p.\theta + \theta _i)
+$$
+<p align="center"><em>Subscripts denote: p.x,p.y,and p.theta are the particles position and orientation. r_i and theta.i correspond to the lidar data</em></p>
+
+Next, we found the expected distance to the nearest obstacle using the helper function self.occupancy_field.get_closest_obstacle_distance(x_hit,y_hit). We used a Guassian Probability distribution to determine the difference between the expected distance and r_i.
+
+$$
+probability = exp(- \frac{expected\ dist^2}{2* uncertainty^2})
 $$
 
-This equation assigns the strongest particles a value of 0, and the weakest particles a theoretical value of infinity (reasonably as large as the selected world map). This is a difficult and unintuitive scale to work with, so we adjusted the scale. We decided that particles closest to 0 should have a weight of 10 instead, while the weakest particles should have a weight of 0. We made this decision because while conceptualizing the project and creating examples to run through the code we thought in terms of whole numbers. While making predictions, debugging, and using fractions such as the equation we have below, whole numbers became easier to conceptualize than decimals. We felt confident picking this range especially since we expected to normalize the particles further into the project anyway. The general logic for assigning particle values in normal cases uses the following equation:
-
-
-$$
-p_w = max(0.1,min(10, \frac{1}{\Delta d}))
-$$
-
-In the unlikely case where the particle weight is exactly 0, the weight of the particle is assigned to 10 instead.
-
+We set the uncertainty of the Guassian Probability 0.2 after experimenting with values that worked best. We multiplied the weight of each particle by the probability to see if the expected distance aligns closely with the reading from the sensor data. Particles that align more closely with the lidar data are assigned a higher weight.
 
 
 #### Normalizing and Resampling Particles
